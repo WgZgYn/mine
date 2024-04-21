@@ -1,23 +1,17 @@
-use bevy::math::Vec2;
 use bevy::prelude::{Component, Resource};
 
 pub mod board;
 
-#[derive(Component)]
-struct Bound {
-    position: Vec2,
-    scale: Vec2,
+#[derive(Component, Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct Coordinate {
+    pub x: usize,
+    pub y: usize,
 }
 
-#[derive(Component)]
-pub struct Coordinate {
-    pub row: usize,
-    pub col: usize,
-}
 
 impl Coordinate {
-    pub fn new(r: usize, c: usize) -> Self {
-        Self { row: r, col: c }
+    pub fn new(x: usize, y: usize) -> Self {
+        Self { x, y}
     }
 }
 

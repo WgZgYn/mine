@@ -1,9 +1,12 @@
 use bevy::log::info;
 use bevy::prelude::*;
+use bevy::utils::HashSet;
 use bevy_inspector_egui::InspectorOptions;
 use bevy_inspector_egui::prelude::*;
+use crate::constant::TOWARDS;
 
 use crate::entity::board::cell::{CellState, CellType};
+use crate::entity::Coordinate;
 
 #[derive(Resource, Debug, Reflect, Default, InspectorOptions)]
 #[reflect(Resource, InspectorOptions)]
@@ -29,6 +32,33 @@ impl BoardModel {
     pub fn size(&self) -> (usize, usize) {
         (self.width, self.height)
     }
+
+    pub fn get(&self, r: usize, c: usize) -> CellType {
+        self.data[r][c]
+    }
+
+    pub fn uncover_tiles(&self, tiles: Coordinate, visit: &mut HashSet<Coordinate>) {
+        if visit.contains(&tiles) { return; }
+        let (tx, ty) = (tiles.x, tiles.y);
+        match self.get(ty, tx) {
+            CellType::Empty => {
+                visit.insert(tiles);
+                println!("blank");
+            }
+            CellType::Mine => return,
+            CellType::Number(_) => {
+                visit.insert(tiles);
+                return;
+            }
+        }
+        let (w, h) = self.size();
+        for (x, y) in TOWARDS {
+            let x = tx as i32 + x;
+            let y = ty as i32 + y;
+            if x < 0 || y < 0 || x >= w as i32 || y >= h as i32 { continue; }
+            self.uncover_tiles(Coordinate::new(x as usize, y as usize), visit);
+        }
+    }
     fn init_mines(&mut self, mut count: usize) {
         assert!(count <= self.height * self.width);
         if count >= self.width * self.height / 2 {
@@ -48,7 +78,6 @@ impl BoardModel {
         info!("the board was just initialized");
     }
     fn count_mines(&mut self) {
-        // the (r, c) should be empty.
         fn count_mine(grid: &Vec<Vec<CellType>>, r: usize, c: usize) -> usize {
             let mut res = 0;
             for i in r.max(1) - 1..=(r + 1).min(grid.len() - 1) {
