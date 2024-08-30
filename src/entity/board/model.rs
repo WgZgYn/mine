@@ -1,18 +1,16 @@
 use bevy::log::info;
 use bevy::prelude::*;
 use bevy::utils::HashSet;
-use bevy_inspector_egui::InspectorOptions;
-use bevy_inspector_egui::prelude::*;
-use crate::constant::TOWARDS;
 
+use crate::constant::TOWARDS;
 use crate::entity::board::cell::{CellState, CellType};
 use crate::entity::Coordinate;
+use crate::system::event::TileEvent;
 
-#[derive(Resource, Debug, Reflect, Default, InspectorOptions)]
-#[reflect(Resource, InspectorOptions)]
+#[derive(Resource, Default)]
 pub struct BoardModel {
-    data: Vec<Vec<CellType>>,
-    covered: Vec<Vec<CellState>>,
+    board: Vec<Vec<CellType>>,
+    state: Vec<Vec<CellState>>,
     height: usize,
     width: usize,
 }
@@ -20,8 +18,8 @@ pub struct BoardModel {
 impl BoardModel {
     pub fn new(width: usize, height: usize, mines: usize) -> Self {
         let mut res = Self {
-            data: vec![vec![CellType::Empty; width]; height],
-            covered: vec![vec![CellState::Covered; width]; height],
+            board: vec![vec![CellType::Empty; width]; height],
+            state: vec![vec![CellState::Covered; width]; height],
             height,
             width,
         };
@@ -33,32 +31,89 @@ impl BoardModel {
         (self.width, self.height)
     }
 
-    pub fn get(&self, r: usize, c: usize) -> CellType {
-        self.data[r][c]
+    pub fn get_type(&self, r: usize, c: usize) -> CellType {
+        self.board[r][c]
     }
-
-    pub fn uncover_tiles(&self, tiles: Coordinate, visit: &mut HashSet<Coordinate>) {
-        if visit.contains(&tiles) { return; }
-        let (tx, ty) = (tiles.x, tiles.y);
-        match self.get(ty, tx) {
+    pub fn get_state(&self, r: usize, c: usize) -> CellState {
+        self.state[r][c]
+    }
+    pub fn set_state(&mut self, r: usize, c: usize, state: CellState) {
+        self.state[r][c] = state;
+    }
+    pub fn uncover_tiles(&self, r: usize, c: usize, visit: &mut HashSet<Coordinate>) {
+        let tiles = Coordinate::new(c, r);
+        if visit.contains(&tiles) || self.get_state(r, c) == CellState::Uncovered {
+            return;
+        }
+        match self.get_type(r, c) {
             CellType::Empty => {
                 visit.insert(tiles);
-                println!("blank");
             }
-            CellType::Mine => return,
-            CellType::Number(_) => {
+            _ => {
                 visit.insert(tiles);
                 return;
             }
         }
         let (w, h) = self.size();
         for (x, y) in TOWARDS {
-            let x = tx as i32 + x;
-            let y = ty as i32 + y;
-            if x < 0 || y < 0 || x >= w as i32 || y >= h as i32 { continue; }
-            self.uncover_tiles(Coordinate::new(x as usize, y as usize), visit);
+            let x = c as i32 + x;
+            let y = r as i32 + y;
+            if x < 0 || y < 0 || x >= w as i32 || y >= h as i32 {
+                continue;
+            }
+            self.uncover_tiles(y as usize, x as usize, visit);
         }
     }
+
+    pub fn click(&self, r: usize, c: usize, tile_ev: &mut EventWriter<TileEvent>, left_click: bool) {
+        let mut st = HashSet::new();
+
+        match (left_click, self.get_state(r, c)) {
+            // it will send TileEvent::Uncover
+            (true, CellState::Covered) => {
+                self.uncover_tiles(r, c, &mut st);
+                tile_ev.send(TileEvent::Uncover(st));
+            }
+
+            // it will send TileEvent::FlagOne
+            (false, CellState::Covered | CellState::Flag) => {
+                tile_ev.send(TileEvent::FlagOne(Coordinate::new(c, r)));
+            }
+
+            // it will send TileEvent::Uncover or TileEvent::Flag
+            (true, CellState::Uncovered) => {
+                if let CellType::Number(i) = self.get_type(r, c) {
+                    let (covered, f) = self.count_state(r, c);
+                    println!("covered: {:?}, flag: {}, i: {}", covered, f, i);
+                    if i == f {
+                        for co in covered {
+                            self.uncover_tiles(co.y, co.x, &mut st);
+                        }
+                        tile_ev.send(TileEvent::Uncover(st));
+                    } else if covered.len() + f == i {
+                        tile_ev.send(TileEvent::Flag(covered));
+                    }
+                }
+            }
+            
+            _ => {}
+        }
+    }
+
+    fn count_state(&self, r: usize, c: usize) -> (HashSet<Coordinate>, usize) {
+        let (mut covered, mut flag) = (HashSet::new(), 0);
+        for i in (r.max(1)-1)..=(r+1).min(self.height-1) {
+            for j in (c.max(1)-1)..=(c+1).min(self.width-1) {
+                match self.get_state(i, j) {
+                    CellState::Covered => { covered.insert(Coordinate::new(j, i)); },
+                    CellState::Flag => { flag += 1; },
+                    _ => {}
+                }
+            }
+        }
+        (covered, flag)
+    }
+
     fn init_mines(&mut self, mut count: usize) {
         assert!(count <= self.height * self.width);
         if count >= self.width * self.height / 2 {
@@ -70,9 +125,9 @@ impl BoardModel {
         while count > 0 {
             let r = rand::random::<usize>() % self.height;
             let c = rand::random::<usize>() % self.width;
-            if self.data[r][c] == CellType::Empty {
+            if self.board[r][c] == CellType::Empty {
                 count -= 1;
-                self.data[r][c] = CellType::Mine;
+                self.board[r][c] = CellType::Mine;
             }
         }
         info!("the board was just initialized");
@@ -92,10 +147,10 @@ impl BoardModel {
 
         for r in 0..self.height {
             for c in 0..self.width {
-                if self.data[r][c] == CellType::Empty {
-                    let count = count_mine(&self.data, r, c);
+                if self.board[r][c] == CellType::Empty {
+                    let count = count_mine(&self.board, r, c);
                     if count != 0 {
-                        self.data[r][c] = CellType::Number(count);
+                        self.board[r][c] = CellType::Number(count);
                     }
                 }
             }
@@ -107,12 +162,12 @@ impl BoardModel {
     }
 
     pub fn is_mine_at(&self, r: usize, c: usize) -> bool {
-        self.data[r][c] == CellType::Mine
+        self.board[r][c] == CellType::Mine
     }
 
     pub fn print(&self) {
         let board = self
-            .data
+            .board
             .iter()
             .map(|v| {
                 v.iter()

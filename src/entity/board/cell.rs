@@ -1,9 +1,6 @@
 use bevy::prelude::*;
-use bevy_inspector_egui::InspectorOptions;
-use bevy_inspector_egui::prelude::*;
 
-#[derive(Component, Reflect, InspectorOptions, Copy, Clone, Eq, PartialEq, Debug, Default)]
-#[reflect(Component, InspectorOptions)]
+#[derive(Component, Copy, Clone, Eq, PartialEq, Debug, Default)]
 pub enum CellType {
     #[default]
     Empty,
@@ -11,11 +8,10 @@ pub enum CellType {
     Number(usize),
 }
 
-#[derive(Component, Copy, Clone, Debug, Default, Reflect, InspectorOptions)]
-#[reflect(Component, InspectorOptions)]
+#[derive(Component, Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum CellState {
     #[default]
     Covered,
     Uncovered,
-    Flaged,
+    Flag,
 }

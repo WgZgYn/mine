@@ -1,14 +1,16 @@
 use bevy::prelude::*;
 use bevy::window::{PresentMode, WindowResolution};
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 
 use crate::constant::*;
 use crate::entity::board::model::BoardModel;
-use crate::entity::BoardOptions;
-use crate::system::event::TileEvent;
+use crate::entity::{BoardOptions, GameState};
+// use crate::entity::sprite::SpriteContainer;
+use crate::system::event::{TileEvent, UncoverMine};
+use system::event::handle::handle_tile_event;
+use crate::system::event::handle::handle_uncover_mine_event;
 use crate::system::input::handle_input;
 use crate::system::setup::*;
-use crate::system::uncover::handle_tile_event;
 
 mod constant;
 mod entity;
@@ -29,17 +31,22 @@ fn main() {
                     ..default()
                 }),
         )
-        .add_plugins(WorldInspectorPlugin::new())
         .add_event::<TileEvent>()
+        .add_event::<UncoverMine>()
         .init_resource::<BoardModel>()
-        .register_type::<BoardModel>()
+        .init_resource::<GameState>()
+        // .init_resource::<SpriteContainer>()
         .insert_resource(BoardOptions {
-            width: 20,
-            height: 20,
-            mines_count: 50,
+            width: 40,
+            height: 40,
+            mines_count: 300,
         })
-        .add_systems(Startup, (setup_camera, setup_board_model, setup_board_view).chain())
-        .add_systems(Update, (handle_input, handle_tile_event))
+        .add_systems(
+            Startup,
+            (setup_camera, setup_board_model, setup_board_view).chain(),
+        )
+        .add_systems(Update, (handle_input, handle_tile_event, handle_uncover_mine_event))
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .add_plugins(LogDiagnosticsPlugin::default())
         .run();
 }
-
