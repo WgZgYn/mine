@@ -9,7 +9,7 @@ pub fn handle_tile_event(
     mut board: ResMut<BoardModel>,
     mut tile_ev: EventReader<TileEvent>,
     mut tile_mine: EventWriter<UncoverMine>,
-    mut tiles: Query<(&mut TextureAtlasSprite, &Coordinate)>,
+    mut tiles: Query<(&mut TextureAtlas, &Coordinate)>,
 ) {
     for ev in tile_ev.read() {
         match ev {
@@ -81,7 +81,7 @@ pub fn handle_uncover_mine_event(
     mut board: ResMut<BoardModel>,
     mut state: ResMut<GameState>,
     mut tile_mine: EventReader<UncoverMine>,
-    mut tiles: Query<(&mut TextureAtlasSprite, &Coordinate)>,
+    mut tiles: Query<(&mut TextureAtlas, &Coordinate)>,
 ) {
     for &UncoverMine(co) in tile_mine.read() {
         for (mut sp, &Coordinate{ x: c, y: r }) in &mut tiles {
@@ -102,5 +102,4 @@ pub fn handle_uncover_mine_event(
         *state = GameState::Ending;
         break;
     }
-
 }

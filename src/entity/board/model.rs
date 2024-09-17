@@ -1,4 +1,3 @@
-use bevy::log::info;
 use bevy::prelude::*;
 use bevy::utils::HashSet;
 
@@ -115,13 +114,13 @@ impl BoardModel {
     }
 
     fn init_mines(&mut self, mut count: usize) {
-        assert!(count <= self.height * self.width);
-        if count >= self.width * self.height / 2 {
-            info!(
-                "the amount of the mines {} is more than half of the cells",
-                count
-            );
-        }
+        // assert!(count <= self.height * self.width);
+        // if count >= self.width * self.height / 2 {
+        //     info!(
+        //         "the amount of the mines {} is more than half of the cells",
+        //         count
+        //     );
+        // }
         while count > 0 {
             let r = rand::random::<usize>() % self.height;
             let c = rand::random::<usize>() % self.width;
@@ -130,7 +129,7 @@ impl BoardModel {
                 self.board[r][c] = CellType::Mine;
             }
         }
-        info!("the board was just initialized");
+        // info!("the board was just initialized");
     }
     fn count_mines(&mut self) {
         fn count_mine(grid: &Vec<Vec<CellType>>, r: usize, c: usize) -> usize {
