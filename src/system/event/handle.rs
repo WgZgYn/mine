@@ -4,52 +4,48 @@ use crate::entity::board::cell::{CellState, CellType};
 use crate::entity::board::model::BoardModel;
 use crate::entity::{Coordinate, GameState};
 use crate::system::event::{TileEvent, UncoverMine};
-
-pub fn handle_tile_event(
+pub fn on_tile_event(
+    trigger: Trigger<TileEvent>,
     mut board: ResMut<BoardModel>,
-    mut tile_ev: EventReader<TileEvent>,
-    mut tile_mine: EventWriter<UncoverMine>,
-    mut tiles: Query<(&mut TextureAtlas, &Coordinate)>,
+    mut tiles: Query<(&mut Sprite, &Coordinate)>,
+    mut commands: Commands,
 ) {
-    for ev in tile_ev.read() {
+    let ev = trigger.event();
+    for (mut sprite, co) in &mut tiles {
+        if sprite.texture_atlas.is_none() { continue; }
+        let tile = sprite.texture_atlas.as_mut().unwrap();
         match ev {
             TileEvent::Uncover(st) => {
-                for (mut tile, co) in &mut tiles {
-                    if st.contains(co) {
-                        match board.get_state(co.y, co.x) {
-                            CellState::Covered => {
-                                tile.index = match board.get_type(co.y, co.x) {
-                                    CellType::Empty => 0,
-                                    CellType::Number(i) => i,
-                                    CellType::Mine => {
-                                        tile_mine.send(UncoverMine(*co));
-                                        break;
-                                    },
-                                };
-                                board.set_state(co.y, co.x, CellState::Uncovered);
-                            }
-                            _ => {}
+                if st.contains(co) {
+                    match board.get_state(co.y, co.x) {
+                        CellState::Covered => {
+                            tile.index = match board.get_type(co.y, co.x) {
+                                CellType::Empty => 0,
+                                CellType::Number(i) => i,
+                                CellType::Mine => {
+                                    commands.trigger(UncoverMine(*co));
+                                    break;
+                                }
+                            };
+                            board.set_state(co.y, co.x, CellState::Uncovered);
                         }
+                        _ => {}
                     }
                 }
             }
 
             TileEvent::Flag(st) => {
-                for (mut tile, co) in &mut tiles {
-                    if st.contains(co) {
-                        if let CellState::Uncovered = board.get_state(co.y, co.x) { break; }
-                        flag_flip(&mut board, &mut tile.index, co.x, co.y);
-                    }
+                if st.contains(co) {
+                    if let CellState::Uncovered = board.get_state(co.y, co.x) { break; }
+                    flag_flip(&mut board, &mut tile.index, co.x, co.y);
                 }
             }
 
             TileEvent::FlagOne(st) => {
-                for (mut tile, co) in &mut tiles {
-                    if st == co {
-                        if let CellState::Uncovered = board.get_state(co.y, co.x) { break; }
-                        flag_flip(&mut board, &mut tile.index, co.x, co.y);
-                        break;
-                    }
+                if st == co {
+                    if let CellState::Uncovered = board.get_state(co.y, co.x) { break; }
+                    flag_flip(&mut board, &mut tile.index, co.x, co.y);
+                    break;
                 }
             }
             _ => {}
@@ -60,7 +56,7 @@ pub fn handle_tile_event(
 fn flag_flip(
     board: &mut ResMut<BoardModel>,
     index: &mut usize,
-    x: usize, y: usize
+    x: usize, y: usize,
 ) {
     match board.get_state(y, x) {
         CellState::Covered => {
@@ -73,19 +69,20 @@ fn flag_flip(
             board.set_state(y, x, CellState::Covered);
         }
 
-        CellState::Uncovered => {},
+        CellState::Uncovered => {}
     }
 }
 
-pub fn handle_uncover_mine_event(
+pub fn on_uncover_mine_event(
+    mut trigger: Trigger<UncoverMine>,
     mut board: ResMut<BoardModel>,
     mut state: ResMut<GameState>,
-    mut tile_mine: EventReader<UncoverMine>,
-    mut tiles: Query<(&mut TextureAtlas, &Coordinate)>,
+    mut tiles: Query<(&mut Sprite, &Coordinate)>,
 ) {
-    for &UncoverMine(co) in tile_mine.read() {
-        for (mut sp, &Coordinate{ x: c, y: r }) in &mut tiles {
-            if Coordinate::new(c, r) == co {
+    let UncoverMine(Coordinate { x, y }) = *trigger.event();
+    for (mut sp, &Coordinate { x: c, y: r }) in &mut tiles {
+        if let Some(sp) = &mut sp.texture_atlas {
+            if (c, r) == (x, y) {
                 sp.index = 11;
                 continue;
             }
@@ -98,8 +95,7 @@ pub fn handle_uncover_mine_event(
                 sp.index = 12;
             }
         }
-        info!("Game Over!");
-        *state = GameState::Ending;
-        break;
     }
+    info!("Game Over!");
+    *state = GameState::Ending;
 }

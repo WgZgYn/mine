@@ -1,7 +1,6 @@
 use bevy::prelude::{Component, Resource};
 
 pub mod board;
-pub mod sprite;
 
 #[derive(Component, Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Coordinate {

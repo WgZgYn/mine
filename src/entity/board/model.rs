@@ -64,19 +64,19 @@ impl BoardModel {
         }
     }
 
-    pub fn click(&self, r: usize, c: usize, tile_ev: &mut EventWriter<TileEvent>, left_click: bool) {
+    pub fn click(&self, r: usize, c: usize, left_click: bool) -> Option<TileEvent> {
         let mut st = HashSet::new();
 
         match (left_click, self.get_state(r, c)) {
             // it will send TileEvent::Uncover
             (true, CellState::Covered) => {
                 self.uncover_tiles(r, c, &mut st);
-                tile_ev.send(TileEvent::Uncover(st));
+                return Some(TileEvent::Uncover(st));
             }
 
             // it will send TileEvent::FlagOne
             (false, CellState::Covered | CellState::Flag) => {
-                tile_ev.send(TileEvent::FlagOne(Coordinate::new(c, r)));
+                return Some(TileEvent::FlagOne(Coordinate::new(c, r)));
             }
 
             // it will send TileEvent::Uncover or TileEvent::Flag
@@ -88,24 +88,24 @@ impl BoardModel {
                         for co in covered {
                             self.uncover_tiles(co.y, co.x, &mut st);
                         }
-                        tile_ev.send(TileEvent::Uncover(st));
+                        return Some(TileEvent::Uncover(st));
                     } else if covered.len() + f == i {
-                        tile_ev.send(TileEvent::Flag(covered));
+                        return Some(TileEvent::Flag(covered));
                     }
                 }
             }
-            
             _ => {}
         }
+        None
     }
 
     fn count_state(&self, r: usize, c: usize) -> (HashSet<Coordinate>, usize) {
         let (mut covered, mut flag) = (HashSet::new(), 0);
-        for i in (r.max(1)-1)..=(r+1).min(self.height-1) {
-            for j in (c.max(1)-1)..=(c+1).min(self.width-1) {
+        for i in (r.max(1) - 1)..=(r + 1).min(self.height - 1) {
+            for j in (c.max(1) - 1)..=(c + 1).min(self.width - 1) {
                 match self.get_state(i, j) {
-                    CellState::Covered => { covered.insert(Coordinate::new(j, i)); },
-                    CellState::Flag => { flag += 1; },
+                    CellState::Covered => { covered.insert(Coordinate::new(j, i)); }
+                    CellState::Flag => { flag += 1; }
                     _ => {}
                 }
             }

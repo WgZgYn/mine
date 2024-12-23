@@ -5,7 +5,7 @@ use bevy::utils::HashSet;
 
 use crate::entity::Coordinate;
 
-#[derive(Event)]
+#[derive(Event, Debug)]
 pub enum TileEvent {
     Uncover(HashSet<Coordinate>),
     Flag(HashSet<Coordinate>),
@@ -15,3 +15,9 @@ pub enum TileEvent {
 
 #[derive(Event)]
 pub struct UncoverMine(pub Coordinate);
+
+#[derive(Event, Copy, Clone)]
+pub struct MouseClickEvent {
+    pub coordinate: Coordinate,
+    pub left_button: bool,
+}
