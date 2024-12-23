@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::entity::board::model::BoardModel;
 use crate::entity::Coordinate;
-use crate::system::event::{MouseClickEvent, TileEvent};
+use crate::system::event::MouseClickEvent;
 
 
 pub fn on_cell_click(
