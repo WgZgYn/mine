@@ -5,7 +5,7 @@ use bevy::utils::HashSet;
 
 use crate::entity::Coordinate;
 
-#[derive(Event, Debug)]
+#[derive(Event)]
 pub enum TileEvent {
     Uncover(HashSet<Coordinate>),
     Flag(HashSet<Coordinate>),
