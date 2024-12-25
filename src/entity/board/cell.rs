@@ -5,7 +5,7 @@ pub enum CellType {
     #[default]
     Empty,
     Mine,
-    Number(usize),
+    Number(u8),
 }
 
 #[derive(Component, Copy, Clone, Debug, Default, Eq, PartialEq)]

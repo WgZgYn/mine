@@ -21,7 +21,7 @@ pub fn on_tile_event(
                         CellState::Covered => {
                             tile.index = match board.get_type(co.y, co.x) {
                                 CellType::Empty => 0,
-                                CellType::Number(i) => i,
+                                CellType::Number(i) => i as usize,
                                 CellType::Mine => {
                                     commands.trigger(UncoverMine(*co));
                                     break;
