@@ -12,6 +12,8 @@ pub struct BoardModel {
     state: Vec<Vec<CellState>>,
     height: usize,
     width: usize,
+    inited: bool,
+    mines: usize,
 }
 
 impl BoardModel {
@@ -21,9 +23,28 @@ impl BoardModel {
             state: vec![vec![CellState::Covered; width]; height],
             height,
             width,
+            inited: false,
+            mines,
         };
-        res.init(mines);
+        // res.init(mines);
         res
+    }
+
+    fn clear(&mut self) {
+        self.board.iter_mut().for_each(|row| row.iter_mut().for_each(|cell| *cell = CellType::Empty));
+        self.state.iter_mut().for_each(|row| row.iter_mut().for_each(|cell| *cell = CellState::Covered));
+    }
+
+    fn start_with(&mut self, r: usize, c: usize, mines: usize) {
+        self.clear();
+        self.init_mines(mines);
+        self.count_mines();
+
+        while self.get_type(r, c) != CellType::Empty {
+            self.clear();
+            self.init_mines(mines);
+            self.count_mines();
+        }
     }
 
     pub fn size(&self) -> (usize, usize) {
@@ -64,9 +85,16 @@ impl BoardModel {
         }
     }
 
-    pub fn click(&self, r: usize, c: usize, left_click: bool) -> Option<TileEvent> {
-        let mut st = HashSet::new();
+    pub fn click(&mut self, r: usize, c: usize, left_click: bool) -> Option<TileEvent> {
+        info!("{r} {c}");
 
+        if !self.inited {
+            info!("first click");
+            self.start_with(r, c, self.mines);
+            self.inited = true;
+        }
+
+        let mut st = HashSet::new();
         match (left_click, self.get_state(r, c)) {
             // it will send TileEvent::Uncover
             (true, CellState::Covered) => {
@@ -89,7 +117,7 @@ impl BoardModel {
                             self.uncover_tiles(co.y, co.x, &mut st);
                         }
                         return Some(TileEvent::Uncover(st));
-                    } else if covered.len() + f == i {
+                    } else if covered.len() as u8 + f == i {
                         return Some(TileEvent::Flag(covered));
                     }
                 }
@@ -99,7 +127,7 @@ impl BoardModel {
         None
     }
 
-    fn count_state(&self, r: usize, c: usize) -> (HashSet<Coordinate>, usize) {
+    fn count_state(&self, r: usize, c: usize) -> (HashSet<Coordinate>, u8) {
         let (mut covered, mut flag) = (HashSet::new(), 0);
         for i in (r.max(1) - 1)..=(r + 1).min(self.height - 1) {
             for j in (c.max(1) - 1)..=(c + 1).min(self.width - 1) {
@@ -132,7 +160,7 @@ impl BoardModel {
         // info!("the board was just initialized");
     }
     fn count_mines(&mut self) {
-        fn count_mine(grid: &Vec<Vec<CellType>>, r: usize, c: usize) -> usize {
+        fn count_mine(grid: &Vec<Vec<CellType>>, r: usize, c: usize) -> u8 {
             let mut res = 0;
             for i in r.max(1) - 1..=(r + 1).min(grid.len() - 1) {
                 for j in c.max(1) - 1..=(c + 1).min(grid[i].len() - 1) {
@@ -155,10 +183,10 @@ impl BoardModel {
             }
         }
     }
-    fn init(&mut self, mines: usize) {
-        self.init_mines(mines);
-        self.count_mines();
-    }
+    // fn init(&mut self, mines: usize) {
+    //     self.init_mines(mines);
+    //     self.count_mines();
+    // }
 
     pub fn is_mine_at(&self, r: usize, c: usize) -> bool {
         self.board[r][c] == CellType::Mine
@@ -176,7 +204,7 @@ impl BoardModel {
                         CellType::Number(i) => i.to_string(),
                     })
                     .collect::<Vec<_>>()
-                    .join("\t")
+                    .join(" ")
             })
             .collect::<Vec<_>>()
             .join("\n");

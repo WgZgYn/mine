@@ -25,7 +25,6 @@ pub fn setup_camera(mut commands: Commands, options: Res<BoardOptions>) {
 
 pub fn setup_board_model(options: Res<BoardOptions>, mut grid: ResMut<BoardModel>) {
     *grid = BoardModel::new(options.width, options.height, options.mines_count);
-    grid.print()
 }
 
 pub fn setup_board_view(

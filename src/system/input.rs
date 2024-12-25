@@ -7,7 +7,7 @@ use crate::system::event::MouseClickEvent;
 
 pub fn on_cell_click(
     trigger: Trigger<MouseClickEvent>,
-    board: Res<BoardModel>,
+    mut board: ResMut<BoardModel>,
     mut commands: Commands,
 ) {
     let event = trigger.event();
