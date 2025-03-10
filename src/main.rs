@@ -1,15 +1,13 @@
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
-use bevy::input::keyboard::KeyboardInput;
-use bevy::input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll};
-use bevy::prelude::*;
-use bevy::window::{PresentMode, WindowResolution};
+use crate::constant::{APP_TITLE, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::entity::board::model::BoardModel;
 use crate::entity::{BoardOptions, GameState};
 use crate::system::event::handle::{on_tile_event, on_uncover_mine_event};
 use crate::system::event::{TileEvent, UncoverMine};
 use crate::system::input::on_cell_click;
 use crate::system::setup::*;
-use crate::constant::{APP_TITLE, WINDOW_HEIGHT, WINDOW_WIDTH};
+use bevy::input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll};
+use bevy::prelude::*;
+use bevy::window::{PresentMode, WindowResolution};
 
 mod constant;
 mod entity;
@@ -57,16 +55,16 @@ fn move_camera(
     mus: Res<ButtonInput<MouseButton>>,
 ) {
     if motion.delta != Vec2::ZERO && btn.pressed(KeyCode::AltLeft) || mus.pressed(MouseButton::Middle) {
-        info!("move!");
+        // info!("move!");
         transform.translation.x -= motion.delta.x;
         transform.translation.y += motion.delta.y;
     }
 
     if scale.delta != Vec2::ZERO && btn.pressed(KeyCode::ControlLeft) {
-        info!("scale!");
-        if scale.delta.y != 1. {
+        // info!("scale!");
+        if scale.delta.y == -1. {
             transform.scale *= 1.25;
-        } else {
+        } else if scale.delta.y == 1. {
             transform.scale *= 0.9;
         }
     }

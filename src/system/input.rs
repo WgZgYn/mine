@@ -16,3 +16,4 @@ pub fn on_cell_click(
         commands.trigger(event);
     }
 }
+

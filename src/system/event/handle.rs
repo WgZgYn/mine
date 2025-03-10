@@ -9,8 +9,10 @@ pub fn on_tile_event(
     mut board: ResMut<BoardModel>,
     mut tiles: Query<(&mut Sprite, &Coordinate)>,
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
 ) {
     let ev = trigger.event();
+    let mut play_pipe = true;
     for (mut sprite, co) in &mut tiles {
         if sprite.texture_atlas.is_none() { continue; }
         let tile = sprite.texture_atlas.as_mut().unwrap();
@@ -23,6 +25,7 @@ pub fn on_tile_event(
                                 CellType::Empty => 0,
                                 CellType::Number(i) => i as usize,
                                 CellType::Mine => {
+                                    play_pipe = false;
                                     commands.trigger(UncoverMine(*co));
                                     break;
                                 }
@@ -51,6 +54,14 @@ pub fn on_tile_event(
             _ => {}
         }
     }
+
+    if play_pipe {
+        play_pipe_sound(&mut commands, asset_server);
+    }
+}
+
+fn play_pipe_sound(commands: &mut Commands, asset_server: Res<AssetServer>) {
+    commands.spawn(AudioPlayer::new(asset_server.load("sounds/pipe.ogg")));
 }
 
 fn flag_flip(
@@ -78,8 +89,11 @@ pub fn on_uncover_mine_event(
     mut board: ResMut<BoardModel>,
     mut state: ResMut<GameState>,
     mut tiles: Query<(&mut Sprite, &Coordinate)>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
 ) {
     let UncoverMine(Coordinate { x, y }) = *trigger.event();
+    play_laugh_sound(&mut commands, asset_server);
     for (mut sp, &Coordinate { x: c, y: r }) in &mut tiles {
         if let Some(sp) = &mut sp.texture_atlas {
             if (c, r) == (x, y) {
@@ -98,4 +112,8 @@ pub fn on_uncover_mine_event(
     }
     info!("Game Over!");
     *state = GameState::Ending;
+}
+
+fn play_laugh_sound(commands: &mut Commands, asset_server: Res<AssetServer>) {
+    commands.spawn(AudioPlayer::new(asset_server.load("sounds/laugh.ogg")));
 }
